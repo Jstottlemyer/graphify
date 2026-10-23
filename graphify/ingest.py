@@ -291,13 +291,13 @@ def save_query_result(
 
     frontmatter_lines = [
         "---",
-        f'type: "{query_type}"',
+        f'type: "{_yaml_str(query_type)}"',
         f'date: "{now.isoformat()}"',
         f'question: "{_yaml_str(question)}"',
         'contributor: "graphify"',
     ]
     if source_nodes:
-        nodes_str = ", ".join(f'"{n}"' for n in source_nodes[:10])
+        nodes_str = ", ".join(f'"{_yaml_str(n)}"' for n in source_nodes[:10])
         frontmatter_lines.append(f"source_nodes: [{nodes_str}]")
     frontmatter_lines.append("---")
 
