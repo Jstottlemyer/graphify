@@ -46,6 +46,18 @@ def test_validate_url_rejects_empty_scheme():
         validate_url("//no-scheme.example.com")
 
 
+@pytest.mark.parametrize("url", ["https://", "http:///missing", "https://?q=x"])
+def test_validate_url_rejects_missing_hostname(url):
+    with pytest.raises(ValueError, match="hostname"):
+        validate_url(url)
+
+
+@pytest.mark.parametrize("url", ["https://alice@example.com", "https://alice:pw@example.com"])
+def test_validate_url_rejects_embedded_credentials(url):
+    with pytest.raises(ValueError, match="credentials"):
+        validate_url(url)
+
+
 # ---------------------------------------------------------------------------
 # safe_fetch - scheme and redirect guards (mocked network)
 # ---------------------------------------------------------------------------
