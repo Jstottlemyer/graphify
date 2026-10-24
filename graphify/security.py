@@ -43,6 +43,10 @@ def validate_url(url: str) -> str:
         )
 
     hostname = parsed.hostname
+    if not hostname:
+        raise ValueError("URL must contain a hostname")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("Embedded URL credentials are not allowed")
     if hostname:
         # Block known cloud metadata hostnames
         if hostname.lower() in _BLOCKED_HOSTS:
