@@ -360,9 +360,17 @@ LEGEND.forEach(c => {{
     nodesDS.update(updates);
     updateSelectAllState();
   }});
-  item.innerHTML = `<div class="legend-dot" style="background:${{c.color}}"></div>
-    <span class="legend-label">${{c.label}}</span>
-    <span class="legend-count">${{c.count}}</span>`;
+  // Community names may come from imported source content. Never parse them as HTML.
+  const dot = document.createElement('div');
+  dot.className = 'legend-dot';
+  dot.style.backgroundColor = String(c.color);
+  const label = document.createElement('span');
+  label.className = 'legend-label';
+  label.textContent = String(c.label);
+  const count = document.createElement('span');
+  count.className = 'legend-count';
+  count.textContent = String(c.count);
+  item.append(dot, label, count);
   item.prepend(cb);
   item.onclick = (e) => {{
     if (e.target === cb) return;
