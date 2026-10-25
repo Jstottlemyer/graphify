@@ -118,7 +118,12 @@ class _NoFileRedirectHandler(urllib.request.HTTPRedirectHandler):
 
 
 def _build_opener() -> urllib.request.OpenerDirector:
-    return urllib.request.build_opener(_NoFileRedirectHandler)
+    # urllib automatically trusts ambient HTTP(S)_PROXY settings. A proxy
+    # resolves target hosts on our behalf, bypassing the guarded DNS socket.
+    # Force direct connections so the SSRF IP checks protect actual sockets.
+    return urllib.request.build_opener(
+        urllib.request.ProxyHandler({}), _NoFileRedirectHandler
+    )
 
 
 # ---------------------------------------------------------------------------
