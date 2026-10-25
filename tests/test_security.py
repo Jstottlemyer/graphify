@@ -73,6 +73,21 @@ def _make_mock_response(content: bytes, status: int = 200):
     return mock
 
 
+def test_safe_fetch_disables_ambient_proxies(monkeypatch):
+    """An ambient proxy must not bypass the IP guards on direct sockets."""
+    import urllib.request
+    from graphify.security import _build_opener, _NoFileRedirectHandler
+
+    monkeypatch.setenv("https_proxy", "http://127.0.0.1:3128")
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:3128")
+    opener = _build_opener()
+    assert not any(
+        isinstance(h, urllib.request.ProxyHandler) and h.proxies
+        for h in opener.handlers
+    )
+    assert any(isinstance(h, _NoFileRedirectHandler) for h in opener.handlers)
+
+
 def test_safe_fetch_rejects_file_url():
     with pytest.raises(ValueError, match="file"):
         safe_fetch("file:///etc/passwd")
