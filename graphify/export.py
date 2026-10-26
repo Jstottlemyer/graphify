@@ -664,9 +664,9 @@ def to_html(
             "confidence": confidence,
         })
 
-    # Build community legend data
+    # Build community legend data for every community, including unlabeled ones.
     legend_data = []
-    for cid in sorted((community_labels or {}).keys()):
+    for cid in sorted(communities):
         color = COMMUNITY_COLORS[cid % len(COMMUNITY_COLORS)]
         # The legend inserts labels with DOM textContent; HTML-escaping here double-encodes them.
         lbl = sanitize_label((community_labels or {}).get(cid, f"Community {cid}"))
