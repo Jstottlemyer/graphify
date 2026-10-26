@@ -151,3 +151,35 @@ def test_to_canvas_file_paths_relative_to_vault():
         for node in file_nodes:
             assert "/" not in node["file"], f"file path should not contain '/': {node['file']}"
             assert node["file"].endswith(".md")
+
+
+def test_to_html_neighbor_navigation_avoids_inline_event_handlers():
+    """Imported node IDs and labels must not enter HTML event attributes."""
+    G = make_graph()
+    communities = cluster(G)
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "graph.html"
+        to_html(G, communities, str(out))
+        source = out.read_text(encoding="utf-8")
+        assert 'onclick="focusNode(' not in source
+        assert "neighbor.textContent = String(nb ? nb.label : nid)" in source
+        assert "neighbor.addEventListener('click', () => focusNode(nid))" in source
+        assert "document.getElementById('neighbors-list').append(...neighborItems)" in source
+
+
+def test_to_html_legend_preserves_literal_punctuation():
+    """DOM textContent must display labels literally, without HTML entity text."""
+    G = make_graph()
+    communities = cluster(G)
+    cid = next(iter(communities))
+    label = 'R&D <North> "quoted" </script><script>trigger()</script>'
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "graph.html"
+        to_html(G, communities, str(out), community_labels={cid: label})
+        source = out.read_text(encoding="utf-8")
+        embedded = source.split("const LEGEND = ", 1)[1].split(";", 1)[0]
+        legend = json.loads(embedded)
+        assert "</script>" not in embedded  # JSON cannot terminate its containing script.
+        assert r"<\/script>" in embedded  # _js_safe still preserves literal labels.
+        assert legend[0]["label"] == label
+        assert "label.textContent = String(c.label)" in source

@@ -236,19 +236,29 @@ function showInfo(nodeId) {{
   const n = nodesDS.get(nodeId);
   if (!n) return;
   const neighborIds = network.getConnectedNodes(nodeId);
+  // Node IDs come from imported data; never interpolate them into inline
+  // JavaScript attributes (JSON quotes break HTML attributes and allow XSS).
   const neighborItems = neighborIds.map(nid => {{
     const nb = nodesDS.get(nid);
     const color = nb ? nb.color.background : '#555';
-    return `<span class="neighbor-link" style="border-left-color:${{esc(color)}}" onclick="focusNode(${{JSON.stringify(nid)}})">${{esc(nb ? nb.label : nid)}}</span>`;
-  }}).join('');
+    const neighbor = document.createElement('span');
+    neighbor.className = 'neighbor-link';
+    neighbor.style.borderLeftColor = String(color);
+    neighbor.textContent = String(nb ? nb.label : nid);
+    neighbor.addEventListener('click', () => focusNode(nid));
+    return neighbor;
+  }});
   document.getElementById('info-content').innerHTML = `
     <div class="field"><b>${{esc(n.label)}}</b></div>
     <div class="field">Type: ${{esc(n._file_type || 'unknown')}}</div>
     <div class="field">Community: ${{esc(n._community_name)}}</div>
     <div class="field">Source: ${{esc(n._source_file || '-')}}</div>
     <div class="field">Degree: ${{n._degree}}</div>
-    ${{neighborIds.length ? `<div class="field" style="margin-top:8px;color:#aaa;font-size:11px">Neighbors (${{neighborIds.length}})</div><div id="neighbors-list">${{neighborItems}}</div>` : ''}}
+    ${{neighborIds.length ? `<div class="field" style="margin-top:8px;color:#aaa;font-size:11px">Neighbors (${{neighborIds.length}})</div><div id="neighbors-list"></div>` : ''}}
   `;
+  if (neighborItems.length) {{
+    document.getElementById('neighbors-list').append(...neighborItems);
+  }}
 }}
 
 function focusNode(nodeId) {{
@@ -360,9 +370,17 @@ LEGEND.forEach(c => {{
     nodesDS.update(updates);
     updateSelectAllState();
   }});
-  item.innerHTML = `<div class="legend-dot" style="background:${{c.color}}"></div>
-    <span class="legend-label">${{c.label}}</span>
-    <span class="legend-count">${{c.count}}</span>`;
+  // Community names may come from imported source content. Never parse them as HTML.
+  const dot = document.createElement('div');
+  dot.className = 'legend-dot';
+  dot.style.backgroundColor = String(c.color);
+  const label = document.createElement('span');
+  label.className = 'legend-label';
+  label.textContent = String(c.label);
+  const count = document.createElement('span');
+  count.className = 'legend-count';
+  count.textContent = String(c.count);
+  item.append(dot, label, count);
   item.prepend(cb);
   item.onclick = (e) => {{
     if (e.target === cb) return;
@@ -650,7 +668,8 @@ def to_html(
     legend_data = []
     for cid in sorted((community_labels or {}).keys()):
         color = COMMUNITY_COLORS[cid % len(COMMUNITY_COLORS)]
-        lbl = _html.escape(sanitize_label((community_labels or {}).get(cid, f"Community {cid}")))
+        # The legend inserts labels with DOM textContent; HTML-escaping here double-encodes them.
+        lbl = sanitize_label((community_labels or {}).get(cid, f"Community {cid}"))
         n = member_counts.get(cid, len(communities.get(cid, []))) if member_counts else len(communities.get(cid, []))
         legend_data.append({"cid": cid, "color": color, "label": lbl, "count": n})
 
