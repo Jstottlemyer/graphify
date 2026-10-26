@@ -116,6 +116,24 @@ def test_to_html_contains_legend_with_labels():
         content = out.read_text()
         assert "Group 0" in content
 
+def test_to_html_legend_includes_unnamed_communities():
+    """The community filter must exist even without complete display labels."""
+    G = make_graph()
+    communities = cluster(G)
+    assert communities
+    first = next(iter(communities))
+    for labels in (None, {first: "Custom name"}):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "graph.html"
+            to_html(G, communities, str(out), community_labels=labels)
+            source = out.read_text(encoding="utf-8")
+            embedded = source.split("const LEGEND = ", 1)[1].split(";", 1)[0]
+            entries = {entry["cid"]: entry["label"] for entry in json.loads(embedded)}
+            assert set(entries) == set(communities)
+            for cid in communities:
+                assert entries[cid] == (labels or {}).get(cid, f"Community {cid}")
+
+
 def test_to_html_contains_nodes_and_edges():
     G = make_graph()
     communities = cluster(G)
