@@ -236,19 +236,29 @@ function showInfo(nodeId) {{
   const n = nodesDS.get(nodeId);
   if (!n) return;
   const neighborIds = network.getConnectedNodes(nodeId);
+  // Node IDs come from imported data; never interpolate them into inline
+  // JavaScript attributes (JSON quotes break HTML attributes and allow XSS).
   const neighborItems = neighborIds.map(nid => {{
     const nb = nodesDS.get(nid);
     const color = nb ? nb.color.background : '#555';
-    return `<span class="neighbor-link" style="border-left-color:${{esc(color)}}" onclick="focusNode(${{JSON.stringify(nid)}})">${{esc(nb ? nb.label : nid)}}</span>`;
-  }}).join('');
+    const neighbor = document.createElement('span');
+    neighbor.className = 'neighbor-link';
+    neighbor.style.borderLeftColor = String(color);
+    neighbor.textContent = String(nb ? nb.label : nid);
+    neighbor.addEventListener('click', () => focusNode(nid));
+    return neighbor;
+  }});
   document.getElementById('info-content').innerHTML = `
     <div class="field"><b>${{esc(n.label)}}</b></div>
     <div class="field">Type: ${{esc(n._file_type || 'unknown')}}</div>
     <div class="field">Community: ${{esc(n._community_name)}}</div>
     <div class="field">Source: ${{esc(n._source_file || '-')}}</div>
     <div class="field">Degree: ${{n._degree}}</div>
-    ${{neighborIds.length ? `<div class="field" style="margin-top:8px;color:#aaa;font-size:11px">Neighbors (${{neighborIds.length}})</div><div id="neighbors-list">${{neighborItems}}</div>` : ''}}
+    ${{neighborIds.length ? `<div class="field" style="margin-top:8px;color:#aaa;font-size:11px">Neighbors (${{neighborIds.length}})</div><div id="neighbors-list"></div>` : ''}}
   `;
+  if (neighborItems.length) {{
+    document.getElementById('neighbors-list').append(...neighborItems);
+  }}
 }}
 
 function focusNode(nodeId) {{
