@@ -158,12 +158,14 @@ def test_to_html_legend_preserves_literal_punctuation():
     G = make_graph()
     communities = cluster(G)
     cid = next(iter(communities))
-    label = "R&D <North> \"quoted\""
+    label = 'R&D <North> "quoted" </script><script>trigger()</script>'
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(tmp) / "graph.html"
         to_html(G, communities, str(out), community_labels={cid: label})
         source = out.read_text(encoding="utf-8")
         embedded = source.split("const LEGEND = ", 1)[1].split(";", 1)[0]
         legend = json.loads(embedded)
+        assert "</script>" not in embedded  # JSON cannot terminate its containing script.
+        assert r"<\/script>" in embedded  # _js_safe still preserves literal labels.
         assert legend[0]["label"] == label
         assert "label.textContent = String(c.label)" in source
